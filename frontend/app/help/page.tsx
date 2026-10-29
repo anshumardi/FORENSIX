@@ -1,0 +1,10 @@
+"use client";
+
+import Link from "next/link";
+import { BookOpen, Code2, FileQuestion, LifeBuoy, Network, ShieldCheck } from "lucide-react";
+import { API_BASE_URL } from "@/app/lib/api";
+import { Card, PageHeader } from "@/app/components/ui";
+
+export default function HelpPage() {
+  return <><PageHeader eyebrow="System / reference" title="Help & API reference" description="A concise guide to the FORENSIX workspace and its live backend boundary." actions={<span className="badge"><span className="badge-dot" /> {API_BASE_URL}</span>} /><div className="help-grid"><Card className="help-card"><BookOpen size={19} /><h3>Investigation flow</h3><p>Open a case, ingest evidence, verify integrity, build a timeline, record findings, and download reports from the corresponding workspace screens.</p></Card><Card className="help-card"><ShieldCheck size={19} /><h3>Evidence integrity</h3><p>Evidence detail shows the hash and state supplied by the API. Use <span className="code-inline">Verify integrity</span> to request a fresh backend check.</p></Card><Card className="help-card"><Network size={19} /><h3>Analysis views</h3><p>Network and graph canvases render nodes and relationships returned from <span className="code-inline">/api/network</span> and <span className="code-inline">/api/graph</span>.</p></Card><Card className="help-card"><Code2 size={19} /><h3>API boundary</h3><p>Primary resources are read from typed client helpers under <span className="code-inline">app/lib/api.ts</span>. Empty or unavailable resources are shown honestly.</p></Card><Card className="help-card"><LifeBuoy size={19} /><h3>Optional tooling</h3><p>The Integrations screen only shows tool status returned by the backend. An absent status is not treated as an installed tool.</p></Card><Card className="help-card"><FileQuestion size={19} /><h3>Need a backend check?</h3><p>Review the API connection indicator in the sidebar, then visit <Link href="/settings" className="table-link">Settings</Link> to confirm the configured target.</p></Card></div></>;
+}

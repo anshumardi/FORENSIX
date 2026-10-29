@@ -1,0 +1,14 @@
+FORENSIX SYNTHETIC DEMO DATA
+LABEL: NOT REAL EVIDENCE - TRAINING ONLY
+CASE TYPE: PHISHING EMAIL REVIEW
+
+Message-ID: <synthetic-02@example.invalid>
+From: training-sender@example.invalid
+To: demo.user@example.invalid
+Subject: Synthetic account notification
+Received: 2026-02-02T10:05:00Z
+
+Analyst note:
+This message is a harmless training fixture. The sender and recipient use the
+reserved example.invalid domain. No link was opened and no attachment exists.
+Review focus: sender identity, urgency language, and user-reported context.

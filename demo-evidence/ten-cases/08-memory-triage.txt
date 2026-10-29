@@ -1,0 +1,15 @@
+FORENSIX SYNTHETIC DEMO DATA
+LABEL: NOT REAL EVIDENCE - TRAINING ONLY
+CASE TYPE: MEMORY FORENSICS TRIAGE
+
+Image label: training-memory-08.raw
+Acquisition time: 2026-02-08T09:00:00Z
+Operating system: synthetic Windows training image
+
+Expected exercise questions:
+1. Which processes were active at acquisition time?
+2. Which network connections were present?
+3. Are any modules unexpected for the training image?
+
+No memory image is included. This notes file is safe text and is not a valid
+Volatility input file.

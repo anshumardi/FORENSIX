@@ -1,0 +1,12 @@
+FORENSIX SYNTHETIC DEMO DATA
+LABEL: NOT REAL EVIDENCE - TRAINING ONLY
+CASE TYPE: DISK IMAGE ACQUISITION REVIEW
+
+Evidence label: training-disk-09.img
+Acquisition start: 2026-02-09T16:10:00Z
+Acquisition end: 2026-02-09T16:12:00Z
+Declared size: 64 MiB (synthetic exercise value)
+Declared SHA-256: 0000000000000000000000000000000000000000000000000000000000000000
+
+The image itself is not included. This notes file demonstrates documentation of
+acquisition details and is not a valid disk image for The Sleuth Kit.

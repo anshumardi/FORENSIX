@@ -1,0 +1,4 @@
+timestamp,event,device_label,user,action,notes
+2026-02-04T07:45:12Z,device_connected,TRAINING-USB-04,demo.user,mounted,Synthetic USB event
+2026-02-04T07:46:01Z,file_observation,TRAINING-USB-04,demo.user,read,No real file was copied
+2026-02-04T07:55:44Z,device_removed,TRAINING-USB-04,demo.user,unmounted,Synthetic USB event

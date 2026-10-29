@@ -1,0 +1,22 @@
+{
+  "synthetic": true,
+  "label": "DEMO SAMPLE - NOT REAL EVIDENCE",
+  "case_number": "DEMO-2026-001",
+  "artifact_type": "browser_history_observation",
+  "observations": [
+    {
+      "timestamp": "2026-01-15T09:28:14Z",
+      "browser": "Training Browser",
+      "url": "https://example.invalid/training-landing",
+      "title": "Synthetic training landing page",
+      "note": "Reserved example.invalid domain; no real site was contacted."
+    },
+    {
+      "timestamp": "2026-01-15T09:29:02Z",
+      "browser": "Training Browser",
+      "url": "https://example.invalid/download-not-run",
+      "title": "Synthetic download observation",
+      "note": "The alleged download is a training record only; no file was executed."
+    }
+  ]
+}

@@ -1,0 +1,2 @@
+{"synthetic":true,"label":"NOT REAL EVIDENCE - TRAINING ONLY","timestamp":"2026-02-06T13:01:10Z","service":"training-identity","event":"login","user":"demo.user","source_ip":"203.0.113.18","result":"success"}
+{"synthetic":true,"label":"NOT REAL EVIDENCE - TRAINING ONLY","timestamp":"2026-02-06T13:04:51Z","service":"training-storage","event":"object_read","user":"demo.user","object":"demo-bucket/training-note.txt","result":"success"}

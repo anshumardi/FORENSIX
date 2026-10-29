@@ -1,0 +1,16 @@
+FORENSIX SYNTHETIC DEMO DATA
+LABEL: NOT REAL EVIDENCE - TRAINING ONLY
+CASE TYPE: RANSOMWARE RESPONSE EXERCISE
+
+Exercise scenario:
+The training team reported that three simulated files had changed names during
+a tabletop exercise. No encryption tool, malware, or real user files are present.
+
+Evidence handling note:
+This document records the exercise scenario only. It is not a ransomware sample
+and contains no executable instructions or payload.
+
+Suggested analyst actions:
+- Record the reported time in the timeline.
+- Compare known-good and observed hashes for authorized test files.
+- Document containment decisions and limitations.

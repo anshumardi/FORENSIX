@@ -1,0 +1,23 @@
+{
+  "synthetic": true,
+  "label": "NOT REAL EVIDENCE - TRAINING ONLY",
+  "case_type": "endpoint_login_anomaly",
+  "host": "training-workstation-01",
+  "observations": [
+    {
+      "timestamp": "2026-02-01T08:14:22Z",
+      "event": "interactive_login",
+      "user": "demo.user",
+      "source": "198.51.100.42",
+      "result": "success"
+    },
+    {
+      "timestamp": "2026-02-01T08:16:03Z",
+      "event": "interactive_login",
+      "user": "demo.user",
+      "source": "203.0.113.77",
+      "result": "failed",
+      "note": "Synthetic observation only. Documentation IP range."
+    }
+  ]
+}

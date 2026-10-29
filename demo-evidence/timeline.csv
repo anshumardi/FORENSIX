@@ -1,0 +1,4 @@
+timestamp,title,description,event_type,source,severity,timestamp_uncertain
+2026-01-15T09:28:14Z,Synthetic DNS observation,Training-only DNS event for the demo workflow,network,network-observations.log,info,false
+2026-01-15T09:28:16Z,Synthetic outbound connection,Training-only TCP connection using documentation IP ranges,network,network-observations.log,medium,false
+2026-01-15T09:30:00Z,Workstation triage started,Analyst began the synthetic workstation review,triage,demo-seed,info,false

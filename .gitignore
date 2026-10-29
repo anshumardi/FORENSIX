@@ -1,0 +1,32 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+backend/data/
+frontend/node_modules/
+frontend/.next/
+frontend/.env*
+!frontend/.env.example
+FORENSIX-*.zip
+
+# Python environments and caches
+.venv/
+.venv_backup/
+venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Frontend dependencies and builds
+node_modules/
+dist/
+
+# Local databases and logs
+*.sqlite3
+*.db
+*.log

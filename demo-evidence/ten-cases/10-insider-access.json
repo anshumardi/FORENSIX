@@ -1,0 +1,22 @@
+{
+  "synthetic": true,
+  "label": "NOT REAL EVIDENCE - TRAINING ONLY",
+  "case_type": "insider_access_review",
+  "records": [
+    {
+      "timestamp": "2026-02-10T17:41:12Z",
+      "user": "demo.analyst",
+      "resource": "training-case-archive",
+      "action": "read",
+      "result": "allowed"
+    },
+    {
+      "timestamp": "2026-02-10T17:43:09Z",
+      "user": "demo.analyst",
+      "resource": "training-case-archive",
+      "action": "export",
+      "result": "review-required",
+      "note": "Synthetic policy event; no data was exported."
+    }
+  ]
+}

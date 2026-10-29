@@ -1,0 +1,17 @@
+FORENSIX SYNTHETIC DEMO DATA
+CASE: DEMO-2026-001
+LABEL: NOT REAL EVIDENCE - TRAINING ONLY
+
+Collection note:
+This text file demonstrates a bounded, read-only evidence preview. No command,
+script, or executable content is present in this file.
+
+Synthetic observation:
+At 2026-01-15T09:28:14Z, the training workstation was reported to have an
+unexpected outbound connection. The analyst recorded the observation for review;
+this file does not establish attribution or malicious activity.
+
+Recommended next steps:
+- Compare the connection with the synthetic network observations.
+- Review the timeline entries and their sources.
+- Record only conclusions supported by the available records.
