@@ -40,7 +40,10 @@ def test_case_evidence_integrity_and_audit(client: TestClient, app_settings):
     with connection(app_settings) as conn:
         stored = row_dict(conn.execute("SELECT * FROM evidence WHERE id = ?", (evidence["id"],)).fetchone())
     assert stored is not None
-    (app_settings.evidence_dir / stored["stored_name"]).write_bytes(b"tampered")
+    tampered_path = app_settings.evidence_dir / stored["stored_name"]
+    tampered_path.chmod(0o644)
+    tampered_path.write_bytes(b"tampered")
+    tampered_path.chmod(0o444)
     failed = client.post(f"/api/evidence/{evidence['id']}/verify")
     assert failed.status_code == 200
     assert failed.json()["verified"] is False
@@ -154,6 +157,9 @@ def test_demo_seed_is_labeled(tmp_path: Path):
         seed_demo=True,
     )
     with TestClient(create_app(settings)) as client:
+        bootstrap = client.post("/api/auth/bootstrap", json={"username": "demo-admin", "password": "demo-password-123"})
+        assert bootstrap.status_code == 201, bootstrap.text
+        client.headers.update({"Authorization": f"Bearer {bootstrap.json()['token']}"})
         cases = client.get("/api/cases").json()
         assert any(case["case_number"] == "DEMO-2026-001" and case["title"].startswith("[DEMO]") for case in cases)
         evidence = client.get("/api/evidence").json()

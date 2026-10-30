@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import uuid
+import json
 from pathlib import Path
 from typing import Any
 
 from .config import Settings
 from .database import connection, ensure_within_directory, row_dict, utc_now
 from .integrations import TOOLS, integration_status
+from .report_signing import ensure_signing_key, sign_report
 
 
 def _report_path(settings: Settings, stored_name: str) -> Path:
@@ -25,8 +27,13 @@ def _write_pdf(
     evidence: list[dict[str, Any]],
     findings: list[dict[str, Any]],
     timeline: list[dict[str, Any]],
+    custody: list[dict[str, Any]],
+    iocs: list[dict[str, Any]],
+    attack_techniques: list[str],
     audits: list[dict[str, Any]],
     tools: list[dict[str, Any]],
+    template: str,
+    signer_fingerprint: str,
 ) -> int:
     try:
         from reportlab.lib.pagesizes import letter
@@ -58,7 +65,7 @@ def _write_pdf(
                 pdf.showPage()
                 y = height - 54
 
-    line("FORENSIX FORENSIC REPORT", 16, True)
+    line(f"FORENSIX {template.upper()} FORENSIC REPORT", 16, True)
     line(f"Report identifier: FRX-RPT-{report_id:06d}", 9)
     line(f"Generated: {utc_now()}", 9)
     if case:
@@ -71,7 +78,7 @@ def _write_pdf(
     line("Evidence", 12, True)
     if evidence:
         for item in evidence:
-            line(f"• {item['original_name']} | {item['size']} bytes | SHA-256 {item['sha256']} | {item['integrity_status']}")
+            line(f"• {item['original_name']} | {item['size']} bytes | MD5 {item.get('md5') or 'n/a'} | SHA-1 {item.get('sha1') or 'n/a'} | SHA-256 {item['sha256']} | {item['integrity_status']}")
     else:
         line("No evidence recorded.")
 
@@ -83,12 +90,33 @@ def _write_pdf(
     else:
         line("No findings recorded.")
 
+    if template == "executive":
+        line("Executive summary", 12, True)
+        line(f"Evidence objects reviewed: {len(evidence)} | Findings recorded: {len(findings)} | Timeline events: {len(timeline)}")
+        line("This summary is a local analyst workspace output. It does not establish attribution, authenticity, or courtroom validity.", 9)
+    else:
+        line("IOC table", 12, True)
+        if iocs:
+            for item in iocs[:500]:
+                line(f"• {item['ioc_type']} | {item['defanged_value']} | confidence {item.get('confidence', 'n/a')} | evidence {item.get('evidence_id', 'n/a')} | {item.get('parser', 'unknown')} v{item.get('parser_version', 'unknown')}", 9)
+        else:
+            line("No IOC records recorded.")
+        line("ATT&CK techniques", 12, True)
+        line("• " + (", ".join(attack_techniques) if attack_techniques else "No explicit ATT&CK techniques recorded."), 9)
+
     line("Timeline", 12, True)
     if timeline:
         for event in timeline:
             line(f"• {event['event_timestamp']} | {event['title']} | {event.get('source') or 'unspecified source'}")
     else:
         line("No timeline events recorded.")
+
+    line("Chain of custody", 12, True)
+    if custody:
+        for event in custody:
+            line(f"• {event['event_timestamp']} | {event['from_party']} → {event['to_party']} | {event['reason']} | SHA-256 {event['hash_at_handoff']}", 9)
+    else:
+        line("No custody events recorded.")
 
     line("Analysis integrations", 12, True)
     for tool in tools:
@@ -101,6 +129,7 @@ def _write_pdf(
         line("No audit entries recorded.")
 
     line("Limitations and interpretation notes", 12, True)
+    line(f"• Ed25519 signer fingerprint: {signer_fingerprint}", 9)
     line("• Matching SHA-256 values support post-acquisition integrity checking; they do not independently prove authenticity or correct acquisition.", 9)
     line("• Observations, analyst interpretations, and unverified hypotheses must be distinguished during review; this report does not establish attribution.", 9)
     line("• Optional forensic tools are reported only when detected. Missing tools, unsupported formats, and encrypted content remain unresolved limitations.", 9)
@@ -109,7 +138,7 @@ def _write_pdf(
     return path.stat().st_size
 
 
-def create_report(settings: Settings, case_id: int | None, name: str | None) -> dict[str, Any]:
+def create_report(settings: Settings, case_id: int | None, name: str | None, template: str = "technical") -> dict[str, Any]:
     stored_name = f"report-{uuid.uuid4().hex}.pdf"
     report_name = name or (f"{case_id}-forensic-report.pdf" if case_id else "forensix-case-summary.pdf")
     now = utc_now()
@@ -131,19 +160,41 @@ def create_report(settings: Settings, case_id: int | None, name: str | None) -> 
         if case_id is not None:
             query += " WHERE case_id = ?"
         timeline = [row_dict(row) or {} for row in conn.execute(query, params).fetchall()]
+        custody_query = "SELECT ce.* FROM custody_events ce JOIN evidence e ON e.id = ce.evidence_id"
+        custody_params: tuple[Any, ...] = ()
+        if case_id is not None:
+            custody_query += " WHERE e.case_id = ?"
+            custody_params = (case_id,)
+        custody = [row_dict(row) or {} for row in conn.execute(custody_query, custody_params).fetchall()]
+        ioc_query = "SELECT * FROM iocs"
+        ioc_params: tuple[Any, ...] = ()
+        if case_id is not None:
+            ioc_query += " WHERE case_id = ?"
+            ioc_params = (case_id,)
+        iocs = [row_dict(row) or {} for row in conn.execute(ioc_query, ioc_params).fetchall()]
+        attack_techniques: set[str] = set()
+        for source_rows in (findings, timeline):
+            for source_row in source_rows:
+                values = source_row.get("attack_techniques_json", "[]")
+                try:
+                    attack_techniques.update(json.loads(values))
+                except (TypeError, json.JSONDecodeError):
+                    pass
         audits = [row_dict(row) or {} for row in conn.execute("SELECT * FROM audit_events ORDER BY id DESC LIMIT 200").fetchall()]
         cursor = conn.execute(
             """
-            INSERT INTO reports (case_id, name, format, status, stored_name, created_at)
-            VALUES (?, ?, 'pdf', 'processing', ?, ?)
+            INSERT INTO reports (case_id, name, format, status, stored_name, template, created_at)
+            VALUES (?, ?, 'pdf', 'processing', ?, ?, ?)
             """,
-            (case_id, report_name, stored_name, now),
+            (case_id, report_name, stored_name, template, now),
         )
         report_id = cursor.lastrowid
 
     try:
         tools = [integration_status(tool.id) for tool in TOOLS]
-        size = _write_pdf(settings, stored_name, int(report_id), case, evidence, findings, timeline, audits, tools)
+        _, _, signer_fingerprint = ensure_signing_key(settings)
+        size = _write_pdf(settings, stored_name, int(report_id), case, evidence, findings, timeline, custody, iocs, sorted(attack_techniques), audits, tools, template, signer_fingerprint)
+        signature_name, signer_fingerprint = sign_report(settings, _report_path(settings, stored_name))
     except Exception as exc:
         with connection(settings) as conn:
             conn.execute("UPDATE reports SET status = 'failed', error = ? WHERE id = ?", (str(exc)[:2_000], report_id))
@@ -152,7 +203,7 @@ def create_report(settings: Settings, case_id: int | None, name: str | None) -> 
 
     with connection(settings) as conn:
         row = conn.execute(
-            "UPDATE reports SET status = 'ready', size = ? WHERE id = ? RETURNING *", (size, report_id)
+            "UPDATE reports SET status = 'ready', size = ?, signature_name = ?, signer_fingerprint = ? WHERE id = ? RETURNING *", (size, signature_name, signer_fingerprint, report_id)
         ).fetchone()
     return row_dict(row) or {}
 

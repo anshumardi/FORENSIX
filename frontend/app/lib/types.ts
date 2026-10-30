@@ -26,6 +26,8 @@ export interface EvidenceItem {
   case_number?: string | null;
   media_type?: string | null;
   size?: number | null;
+  md5?: string | null;
+  sha1?: string | null;
   sha256?: string | null;
   hash?: string | null;
   integrity_status?: "verified" | "failed" | "pending" | string | null;
@@ -50,7 +52,11 @@ export interface EvidencePreview {
 export interface VerificationRecord {
   id: ID;
   evidence_id: ID;
+  expected_md5?: string | null;
+  expected_sha1?: string | null;
   expected_hash: string;
+  observed_md5?: string | null;
+  observed_sha1?: string | null;
   observed_hash?: string | null;
   result: string;
   checked_at: string;
@@ -69,6 +75,9 @@ export interface TimelineEvent {
   evidence_id?: ID | null;
   timestamp_uncertain?: boolean;
   raw_metadata?: Record<string, unknown> | null;
+  provenance?: Record<string, unknown> | null;
+  attack_techniques?: string[];
+  confidence?: number | null;
 }
 
 export interface Finding {
@@ -83,6 +92,7 @@ export interface Finding {
   updated_at?: string | null;
   source?: string | null;
   evidence_ids?: ID[];
+  attack_techniques?: string[];
 }
 
 export interface Report {
@@ -94,6 +104,9 @@ export interface Report {
   created_at?: string | null;
   size?: number | null;
   download_url?: string | null;
+  template?: string;
+  signer_fingerprint?: string | null;
+  signature_url?: string | null;
 }
 
 export interface Integration {
@@ -130,12 +143,16 @@ export interface GraphNode {
   label?: string | null;
   group?: string | null;
   value?: number | null;
+  provenance?: Record<string, unknown>;
 }
 
 export interface GraphEdge {
+  id?: string;
   source: string;
   target: string;
   label?: string | null;
+  relationship?: string;
+  provenance?: Record<string, unknown>;
 }
 
 export interface GraphData {
@@ -148,10 +165,14 @@ export interface GraphData {
 export interface NetworkData {
   nodes: NetworkNode[];
   edges: NetworkEdge[];
+  generated_at?: string;
+  methodology?: string;
+  analyses?: Array<{ job_id: ID; evidence_id?: ID | null; status: string; progress?: number; message?: string | null; result: Record<string, any> }>;
 }
 
 export interface NetworkAnalysis {
   evidence_id: ID;
+  job_id?: ID | null;
   available: boolean;
   status: string;
   tool_version?: string | null;
@@ -159,6 +180,10 @@ export interface NetworkAnalysis {
   protocols: Record<string, number>;
   endpoints: string[];
   dns_queries: string[];
+  flows?: Array<Record<string, unknown>>;
+  http_hosts?: string[];
+  tls_sni?: string[];
+  top_talkers?: Array<Record<string, unknown>>;
   sample_packets: Array<Record<string, string | null>>;
   message: string;
   analyzed_at: string;
@@ -189,7 +214,11 @@ export interface OverviewData {
 export interface IntegrityResult {
   verified?: boolean;
   status?: string;
+  expected_md5?: string | null;
+  expected_sha1?: string | null;
   expected_hash?: string | null;
+  observed_md5?: string | null;
+  observed_sha1?: string | null;
   observed_hash?: string | null;
   message?: string | null;
   checked_at?: string | null;
@@ -220,6 +249,7 @@ export interface CreateFindingInput {
   severity?: string;
   confidence?: number;
   source?: string;
+  attack_techniques?: string[];
 }
 
 export interface CreateTimelineInput {
@@ -232,6 +262,7 @@ export interface CreateTimelineInput {
   evidence_id?: ID;
   timestamp_uncertain?: boolean;
   raw_metadata?: Record<string, unknown>;
+  attack_techniques?: string[];
 }
 
 export interface CreateReportInput {
@@ -250,11 +281,146 @@ export interface AnalysisJob {
   evidence_id?: ID | null;
   integration_id: string;
   action: string;
-  arguments: string[];
+  arguments: string[] | Record<string, unknown>;
   tool_version?: string | null;
   status: string;
   output: string;
   error?: string | null;
+  progress?: number;
+  log?: string;
+  cancel_requested?: boolean;
+  created_at?: string | null;
+  updated_at?: string | null;
   started_at: string;
   finished_at?: string | null;
+}
+
+export interface IOCRecord {
+  id: ID;
+  case_id?: ID | null;
+  evidence_id?: ID | null;
+  ioc_type: string;
+  value: string;
+  defanged_value: string;
+  confidence: number;
+  source_record?: string | null;
+  parser: string;
+  parser_version: string;
+  observed_at: string;
+  provenance: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface AttackTechnique {
+  id: string;
+  name: string;
+  tactic: string;
+  description: string;
+}
+
+export interface AttackCoverage {
+  case_id: ID;
+  techniques: Array<AttackTechnique & { count: number; covered: boolean }>;
+  covered_count: number;
+  total_count: number;
+  methodology: string;
+}
+
+export type UserRole = "admin" | "analyst" | "reviewer";
+
+export interface AuthUser {
+  id: ID;
+  username: string;
+  role: UserRole;
+  created_at: string;
+  disabled?: boolean;
+}
+
+export interface AuthSession {
+  token: string;
+  expires_at: string;
+  user: AuthUser;
+}
+
+export interface AuthStatus {
+  initialized: boolean;
+}
+
+export interface AuditEvent {
+  id: ID;
+  event_type: string;
+  entity_type: string;
+  entity_id?: string | null;
+  actor: string;
+  user_id?: ID | null;
+  details: Record<string, unknown>;
+  created_at: string;
+  prev_hash: string;
+  entry_hash: string;
+}
+
+export interface AuditChainResult {
+  ok: boolean;
+  checked_entries: number;
+  broken_entry_id?: ID | null;
+  reason?: string | null;
+}
+
+export interface CustodyEvent {
+  id: ID;
+  evidence_id: ID;
+  from_party: string;
+  to_party: string;
+  reason: string;
+  event_timestamp: string;
+  hash_at_handoff: string;
+  actor: string;
+  user_id?: ID | null;
+  created_at: string;
+}
+
+export interface IntegrityAlert {
+  id: ID;
+  evidence_id: ID;
+  alert_type: string;
+  message: string;
+  expected_hash?: string | null;
+  observed_hash?: string | null;
+  status: string;
+  created_at: string;
+  resolved_at?: string | null;
+}
+
+export interface Note {
+  id: ID;
+  case_id?: ID | null;
+  target_type: "evidence" | "timeline" | "case" | string;
+  target_id: ID;
+  offset?: number | null;
+  title: string;
+  markdown: string;
+  pinned: boolean;
+  author_id?: ID | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SearchResult {
+  record_type: string;
+  record_id: number;
+  case_id?: number | null;
+  title: string;
+  body: string;
+  source?: string | null;
+  snippet: string;
+}
+
+export interface HexView {
+  evidence_id: ID;
+  offset: number;
+  length: number;
+  total_size: number;
+  hex_lines: string[];
+  strings: string[];
+  next_offset?: number | null;
 }

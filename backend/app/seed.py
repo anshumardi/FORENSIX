@@ -7,6 +7,7 @@ from pathlib import Path
 
 from .config import Settings
 from .database import connection, json_dumps, utc_now
+from .audit import record_audit
 from .storage import managed_file
 
 
@@ -73,10 +74,12 @@ def seed_demo_data(settings: Settings) -> None:
         if not path.exists():
             path.write_bytes(sample)
         digest = hashlib.sha256(sample).hexdigest()
+        md5 = hashlib.md5(sample).hexdigest()
+        sha1 = hashlib.sha1(sample).hexdigest()
         conn.execute(
             """
-            INSERT INTO evidence (case_id, original_name, stored_name, media_type, size, sha256, integrity_status, source, uploaded_by, metadata_json, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, 'verified', ?, ?, ?, ?, ?)
+            INSERT INTO evidence (case_id, original_name, stored_name, media_type, size, md5, sha1, sha256, integrity_status, source, uploaded_by, metadata_json, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'verified', ?, ?, ?, ?, ?)
             """,
             (
                 case_id,
@@ -84,6 +87,8 @@ def seed_demo_data(settings: Settings) -> None:
                 stored_name,
                 "text/plain",
                 len(sample),
+                md5,
+                sha1,
                 digest,
                 "demo-seed",
                 "demo-seed",
@@ -92,10 +97,10 @@ def seed_demo_data(settings: Settings) -> None:
                 now,
             ),
         )
+        system_id = conn.execute("SELECT id FROM users WHERE username = 'system'").fetchone()[0]
         conn.execute(
-            """
-            INSERT INTO audit_events (event_type, entity_type, entity_id, actor, details_json, created_at)
-            VALUES ('demo_seeded', 'case', ?, 'system', ?, ?)
-            """,
-            (str(case_id), json_dumps({"label": "DEMO", "source": "startup seed"}), now),
+            "INSERT INTO custody_events (evidence_id, from_party, to_party, reason, event_timestamp, hash_at_handoff, actor, user_id, created_at) VALUES (last_insert_rowid(), 'synthetic source', 'FORENSIX demo vault', 'Synthetic demo evidence seeded for training', ?, ?, 'system', ?, ?)",
+            (now, digest, system_id, now),
         )
+        path.chmod(0o444)
+    record_audit(settings, "demo_seeded", "case", case_id, {"label": "DEMO", "source": "startup seed"})

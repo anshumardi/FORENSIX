@@ -38,8 +38,8 @@ export function severityTone(severity?: Severity | null) {
 
 export function statusTone(status?: string | null) {
   const value = status?.toLowerCase();
-  if (["open", "in_progress", "processing", "pending"].includes(value || "")) return "accent";
-  if (["closed", "resolved", "verified", "ready", "confirmed", "available"].includes(value || "")) return "success";
+  if (["open", "in_progress", "processing", "pending", "queued", "running"].includes(value || "")) return "accent";
+  if (["closed", "resolved", "verified", "ready", "confirmed", "available", "succeeded"].includes(value || "")) return "success";
   if (["failed", "dismissed", "unavailable"].includes(value || "")) return "danger";
   return "neutral";
 }

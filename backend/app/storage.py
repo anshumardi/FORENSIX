@@ -42,13 +42,21 @@ def managed_file(settings: Settings, stored_name: str) -> Path:
     return ensure_within_directory(settings.evidence_dir / stored_name, settings.evidence_dir)
 
 
-async def save_upload(settings: Settings, upload: UploadFile) -> tuple[str, str, int, str]:
-    """Stream an upload into a generated name and return safe name, storage name, size, SHA-256."""
+def enforce_read_only_vault(settings: Settings) -> None:
+    """Normalize managed evidence files to owner/group/other read-only mode."""
+
+    for path in settings.evidence_dir.iterdir():
+        if path.is_file():
+            path.chmod(0o444)
+
+
+async def save_upload(settings: Settings, upload: UploadFile) -> tuple[str, str, int, dict[str, str]]:
+    """Stream an upload into a generated read-only name and return all content hashes."""
 
     original_name = safe_original_name(upload.filename)
     stored_name = f"{uuid.uuid4().hex}-{original_name}"
     destination = managed_file(settings, stored_name)
-    digest = hashlib.sha256()
+    digests = {name: hashlib.new(name) for name in ("md5", "sha1", "sha256")}
     size = 0
     try:
         with destination.open("xb") as output:
@@ -62,24 +70,34 @@ async def save_upload(settings: Settings, upload: UploadFile) -> tuple[str, str,
                         status_code=status.HTTP_413_CONTENT_TOO_LARGE,
                         detail=f"evidence exceeds the {settings.max_upload_size_bytes} byte upload limit",
                     )
-                digest.update(chunk)
+                for digest in digests.values():
+                    digest.update(chunk)
                 output.write(chunk)
     except Exception:
         destination.unlink(missing_ok=True)
         raise
     finally:
         await upload.close()
-    return original_name, stored_name, size, digest.hexdigest()
+    destination.chmod(0o444)
+    return original_name, stored_name, size, {name: digest.hexdigest() for name, digest in digests.items()}
 
 
-def sha256_file(path: Path) -> tuple[int, str]:
-    digest = hashlib.sha256()
+def hash_file(path: Path) -> tuple[int, dict[str, str]]:
+    digests = {name: hashlib.new(name) for name in ("md5", "sha1", "sha256")}
     size = 0
     with path.open("rb") as source:
         while chunk := source.read(CHUNK_SIZE):
             size += len(chunk)
-            digest.update(chunk)
-    return size, digest.hexdigest()
+            for digest in digests.values():
+                digest.update(chunk)
+    return size, {name: digest.hexdigest() for name, digest in digests.items()}
+
+
+def sha256_file(path: Path) -> tuple[int, str]:
+    """Backward-compatible SHA-256 helper for existing callers."""
+
+    size, digests = hash_file(path)
+    return size, digests["sha256"]
 
 
 def safe_preview(path: Path, original_name: str, media_type: str | None) -> tuple[str, str, bool, int]:

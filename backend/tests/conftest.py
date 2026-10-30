@@ -21,6 +21,9 @@ def client(tmp_path: Path):
     )
     application = create_app(settings)
     with TestClient(application) as test_client:
+        bootstrap = test_client.post("/api/auth/bootstrap", json={"username": "test-admin", "password": "test-password-123"})
+        assert bootstrap.status_code == 201, bootstrap.text
+        test_client.headers.update({"Authorization": f"Bearer {bootstrap.json()['token']}"})
         yield test_client
 
 

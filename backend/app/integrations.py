@@ -218,6 +218,12 @@ def analyze_pcap(settings: Settings, evidence_path: Path) -> dict[str, Any]:
         "udp.dstport",
         "-e",
         "dns.qry.name",
+        "-e",
+        "http.host",
+        "-e",
+        "tls.handshake.extensions_server_name",
+        "-e",
+        "frame.len",
         "-c",
         "1000",
         "-q",
@@ -239,11 +245,16 @@ def analyze_pcap(settings: Settings, evidence_path: Path) -> dict[str, Any]:
     protocols: Counter[str] = Counter()
     endpoints: set[str] = set()
     dns_queries: set[str] = set()
+    http_hosts: set[str] = set()
+    tls_sni: set[str] = set()
+    talkers: Counter[str] = Counter()
+    flows: Counter[tuple[str, str, str, str, str]] = Counter()
+    flow_bytes: Counter[tuple[str, str, str, str, str]] = Counter()
     packets: list[dict[str, str | None]] = []
     for raw_line in (result.stdout or "").splitlines()[:1000]:
         fields = raw_line.split("\t")
-        fields += [""] * (9 - len(fields))
-        timestamp, protocol, source, tcp_source, udp_source, destination, tcp_destination, udp_destination, dns_name = fields[:9]
+        fields += [""] * (12 - len(fields))
+        timestamp, protocol, source, tcp_source, udp_source, destination, tcp_destination, udp_destination, dns_name, http_host, tls_name, frame_length = fields[:12]
         protocol = protocol or "unknown"
         protocols[protocol] += 1
         if source:
@@ -252,6 +263,20 @@ def analyze_pcap(settings: Settings, evidence_path: Path) -> dict[str, Any]:
             endpoints.add(destination)
         if dns_name:
             dns_queries.add(dns_name)
+        if http_host:
+            http_hosts.add(http_host)
+        if tls_name:
+            tls_sni.add(tls_name)
+        if source:
+            talkers[source] += 1
+        source_port = tcp_source or udp_source or ""
+        destination_port = tcp_destination or udp_destination or ""
+        flow_key = (source, destination, source_port, destination_port, protocol)
+        flows[flow_key] += 1
+        try:
+            flow_bytes[flow_key] += int(frame_length or 0)
+        except ValueError:
+            pass
         if len(packets) < 25:
             packets.append(
                 {
@@ -262,8 +287,23 @@ def analyze_pcap(settings: Settings, evidence_path: Path) -> dict[str, Any]:
                     "destination": destination or None,
                     "destination_port": tcp_destination or udp_destination or None,
                     "dns_query": dns_name or None,
+                    "http_host": http_host or None,
+                    "tls_sni": tls_name or None,
+                    "frame_length": frame_length or None,
                 }
             )
+    flow_rows = [
+        {
+            "source": key[0] or None,
+            "destination": key[1] or None,
+            "source_port": key[2] or None,
+            "destination_port": key[3] or None,
+            "protocol": key[4],
+            "packets": count,
+            "bytes": flow_bytes[key],
+        }
+        for key, count in flows.most_common(200)
+    ]
     return {
         "available": True,
         "status": "completed",
@@ -272,6 +312,10 @@ def analyze_pcap(settings: Settings, evidence_path: Path) -> dict[str, Any]:
         "protocols": dict(protocols),
         "endpoints": sorted(endpoints)[:200],
         "dns_queries": sorted(dns_queries)[:200],
+        "http_hosts": sorted(http_hosts)[:200],
+        "tls_sni": sorted(tls_sni)[:200],
+        "top_talkers": [{"address": address, "packets": count} for address, count in talkers.most_common(200)],
+        "flows": flow_rows,
         "sample_packets": packets,
         "message": "Metadata extracted from up to 1,000 packets; encrypted payloads were not decrypted.",
         "analyzed_at": checked_at,
